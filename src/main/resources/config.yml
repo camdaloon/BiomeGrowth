@@ -1,9 +1,0 @@
-enabled: true
-
-# Format: -<plantname> <biomename> <speed>
-# Speed is a relative growth-speed value. Higher = faster.
-# 5 = Slow, 20 = Normal, 50 = Fast.
-# Any positive whole number can be used, not just the tab-completion presets.
-plant-speeds:
-  -oak_sapling forest 20
-  -birch_sapling birch_forest 20
