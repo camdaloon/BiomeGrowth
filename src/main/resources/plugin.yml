@@ -1,0 +1,35 @@
+name: BiomeGrowth
+version: 1.0.1-3_beta
+main: me.camdaloon.biomegrowth.BiomeGrowthPlugin
+api-version: '1.21'
+author: camdaloon
+description: Customize plant growth speed per biome.
+commands:
+  plantspeedset:
+    description: Set the growth speed for a plant in a biome.
+    usage: /plantspeedset <plantname> <biomename> <speed>
+    permission: biomegrowth.set
+    aliases: [pss]
+  plantspeedinfo:
+    description: Show the configured growth speed for a plant in a biome.
+    usage: /plantspeedinfo <plantname> <biomename>
+    permission: biomegrowth.set
+    aliases: [psi]
+  plantspeed:
+    description: Manage Biome Growth settings.
+    usage: /plantspeed <on|off|reload>
+    permission: biomegrowth.set
+    aliases: [ps]
+  plantspeedlist:
+    description: List configured growth rules.
+    usage: /plantspeedlist [plantname]
+    permission: biomegrowth.set
+  biomegrowth:
+    description: Manage Biome Growth settings.
+    usage: /biomegrowth <on|off|reload>
+    permission: biomegrowth.set
+    aliases: [bg]
+permissions:
+  biomegrowth.set:
+    description: Allows changing and viewing plant growth speeds.
+    default: op
