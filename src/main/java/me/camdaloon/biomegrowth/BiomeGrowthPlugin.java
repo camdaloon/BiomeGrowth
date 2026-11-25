@@ -60,7 +60,10 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
                     || name.equals("brown_mushroom") || name.equals("red_mushroom")
                     || name.equals("glow_berries") || name.equals("seagrass")
                     || name.equals("tall_seagrass") || name.equals("firefly_bush")
-                    || name.equals("azalea") || name.equals("flowering_azalea")) {
+                    || name.equals("azalea") || name.equals("flowering_azalea")
+                    || name.equals("nether_wart") || name.equals("crimson_fungus") || name.equals("warped_fungus")
+                    || name.equals("crimson_roots") || name.equals("warped_roots") || name.equals("nether_sprouts")
+                    || name.equals("chorus_plant")) {
                 map.putIfAbsent(name, material);
             }
         }
@@ -75,6 +78,7 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
         map.put(Material.KELP_PLANT, "kelp");
         map.put(Material.CAVE_VINES_PLANT, "cave_vines");
         map.put(Material.TALL_SEAGRASS, "seagrass");
+        map.put(Material.BAMBOO_SAPLING, "bamboo");
         return Collections.unmodifiableMap(map);
     }
 
@@ -89,7 +93,9 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
             Map.entry("pitcher_crop", "pitcher_pod"),
             Map.entry("kelp_plant", "kelp"),
             Map.entry("cave_vines_plant", "cave_vines"),
-            Map.entry("tall_seagrass", "seagrass")
+            Map.entry("tall_seagrass", "seagrass"),
+            Map.entry("sweet_berries", "sweet_berry_bush"),
+            Map.entry("cocoa_beans", "cocoa")
     );
 
     @Override
@@ -183,19 +189,24 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
         Block block = event.getBlock();
         if (isEndOrNether(block)) return;
 
-        PlantRule rule = findRule(block.getType(), biomeKey(block));
+        Material grownType = event.getNewState().getType();
+        String plant = plantNameForBlock(grownType);
+        if (plant == null) plant = plantNameForBlock(block.getType());
+        PlantRule rule = plant == null ? null : rules.get(key(plant, biomeKey(block)));
         if (rule == null) return;
 
-        acceleratedPlants.add(BlockKey.of(block));
+        if (VERTICAL_PLANTS.contains(plant)) {
+            Bukkit.getScheduler().runTask(this, () -> trackVerticalPlantTop(block, plant));
+        } else {
+            acceleratedPlants.add(BlockKey.of(block));
+        }
 
         int speed = rule.speed();
         if (speed < 20 && Math.random() > speed / 20.0) {
             event.setCancelled(true);
         }
 
-        if (speed > 20 && VERTICAL_PLANTS.contains(rule.plant())) {
-            Bukkit.getScheduler().runTask(this, () -> trackVerticalPlantTop(block, rule.plant()));
-        }
+        
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -205,10 +216,17 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
         Block block = event.getBlock();
         if (isEndOrNether(block)) return;
 
-        PlantRule rule = findRule(block.getType(), biomeKey(block));
+        Material grownType = event.getNewState().getType();
+        String plant = plantNameForBlock(grownType);
+        if (plant == null) plant = plantNameForBlock(block.getType());
+        PlantRule rule = plant == null ? null : rules.get(key(plant, biomeKey(block)));
         if (rule == null) return;
 
-        acceleratedPlants.add(BlockKey.of(block));
+        if (VERTICAL_PLANTS.contains(plant)) {
+            Bukkit.getScheduler().runTask(this, () -> trackVerticalPlantTop(block, plant));
+        } else {
+            acceleratedPlants.add(BlockKey.of(block));
+        }
         if (rule.speed() < 20 && Math.random() > rule.speed() / 20.0) {
             event.setCancelled(true);
         }
@@ -248,16 +266,24 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
         }
     }
 
+    private Block findVerticalPlantTop(Block block, String plant) {
+        Block start = block;
+        if (!isBlockForPlant(plant, start.getType())) {
+            Block below = start.getRelative(0, -1, 0);
+            if (!isBlockForPlant(plant, below.getType())) return null;
+            start = below;
+        }
+        Block top = start;
+        while (isBlockForPlant(plant, top.getRelative(0, 1, 0).getType())) {
+            top = top.getRelative(0, 1, 0);
+        }
+        return top;
+    }
+
     private void trackVerticalPlantTop(Block block, String plant) {
         if (block == null || isEndOrNether(block)) return;
-        if (!isBlockForPlant(plant, block.getType())) return;
-
-        Block top = block;
-        while (isBlockForPlant(plant, top.getType())) {
-            Block above = top.getRelative(0, 1, 0);
-            if (!isBlockForPlant(plant, above.getType())) break;
-            top = above;
-        }
+        Block top = findVerticalPlantTop(block, plant);
+        if (top == null) return;
 
         PlantRule rule = rules.get(key(plant, biomeKey(top)));
         if (rule != null && rule.speed() > 20) {
@@ -299,6 +325,19 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
                 continue;
             }
 
+            if (VERTICAL_PLANTS.contains(plant)) {
+                Block top = findVerticalPlantTop(block, plant);
+                if (top == null) {
+                    iterator.remove();
+                    continue;
+                }
+                if (!top.equals(block)) {
+                    iterator.remove();
+                    acceleratedPlants.add(BlockKey.of(top));
+                    continue;
+                }
+            }
+
             int speed = rule.speed();
             double extraTicksPerSecond = (speed - 20) / 10.0;
             int extraTicks = (int) Math.floor(extraTicksPerSecond);
@@ -312,6 +351,14 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
                     break;
                 }
                 block.randomTick();
+                if (VERTICAL_PLANTS.contains(plant)) {
+                    Block top = findVerticalPlantTop(block, plant);
+                    if (top != null && !top.equals(block)) {
+                        iterator.remove();
+                        acceleratedPlants.add(BlockKey.of(top));
+                        break;
+                    }
+                }
             }
         }
     }
@@ -353,6 +400,7 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
     }
 
     private boolean isBlockForPlant(String plant, Material material) {
+        if (plant.equals("bamboo")) return material == Material.BAMBOO || material == Material.BAMBOO_SAPLING;
         if (plant.equals("kelp")) return material == Material.KELP || material == Material.KELP_PLANT;
         if (plant.equals("cave_vines")) return material == Material.CAVE_VINES || material == Material.CAVE_VINES_PLANT;
         if (plant.equals("seagrass")) return material == Material.SEAGRASS || material == Material.TALL_SEAGRASS;
