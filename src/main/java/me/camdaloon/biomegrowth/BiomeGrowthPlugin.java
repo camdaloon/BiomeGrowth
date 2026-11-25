@@ -220,11 +220,13 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
         Material grownType = event.getNewState().getType();
         String plant = plantNameForBlock(grownType);
         if (plant == null) plant = plantNameForBlock(block.getType());
-        PlantRule rule = plant == null ? null : rules.get(key(plant, biomeKey(block)));
+        if (plant == null) return;
+        String resolvedPlant = plant;
+        PlantRule rule = rules.get(key(resolvedPlant, biomeKey(block)));
         if (rule == null) return;
 
-        if (VERTICAL_PLANTS.contains(plant)) {
-            Bukkit.getScheduler().runTask(this, () -> trackVerticalPlantTop(block, plant));
+        if (VERTICAL_PLANTS.contains(resolvedPlant)) {
+            Bukkit.getScheduler().runTask(this, () -> trackVerticalPlantTop(block, resolvedPlant));
         } else {
             acceleratedPlants.add(BlockKey.of(block));
         }
