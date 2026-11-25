@@ -78,7 +78,6 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
         map.put(Material.KELP_PLANT, "kelp");
         map.put(Material.CAVE_VINES_PLANT, "cave_vines");
         map.put(Material.TALL_SEAGRASS, "seagrass");
-        map.put(Material.BAMBOO_SAPLING, "bamboo");
         return Collections.unmodifiableMap(map);
     }
 
@@ -192,11 +191,13 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
         Material grownType = event.getNewState().getType();
         String plant = plantNameForBlock(grownType);
         if (plant == null) plant = plantNameForBlock(block.getType());
-        PlantRule rule = plant == null ? null : rules.get(key(plant, biomeKey(block)));
+        if (plant == null) return;
+        String resolvedPlant = plant;
+        PlantRule rule = rules.get(key(resolvedPlant, biomeKey(block)));
         if (rule == null) return;
 
-        if (VERTICAL_PLANTS.contains(plant)) {
-            Bukkit.getScheduler().runTask(this, () -> trackVerticalPlantTop(block, plant));
+        if (VERTICAL_PLANTS.contains(resolvedPlant)) {
+            Bukkit.getScheduler().runTask(this, () -> trackVerticalPlantTop(block, resolvedPlant));
         } else {
             acceleratedPlants.add(BlockKey.of(block));
         }
@@ -400,7 +401,7 @@ public final class BiomeGrowthPlugin extends JavaPlugin implements Listener, Com
     }
 
     private boolean isBlockForPlant(String plant, Material material) {
-        if (plant.equals("bamboo")) return material == Material.BAMBOO || material == Material.BAMBOO_SAPLING;
+        if (plant.equals("bamboo")) return material == Material.BAMBOO;
         if (plant.equals("kelp")) return material == Material.KELP || material == Material.KELP_PLANT;
         if (plant.equals("cave_vines")) return material == Material.CAVE_VINES || material == Material.CAVE_VINES_PLANT;
         if (plant.equals("seagrass")) return material == Material.SEAGRASS || material == Material.TALL_SEAGRASS;
